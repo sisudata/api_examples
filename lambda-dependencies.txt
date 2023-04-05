@@ -1,0 +1,67 @@
+https://www.geeksforgeeks.org/how-to-install-python-packages-for-aws-lambda-layers/
+
+https://linuxhint.com/install-python-ubuntu-22-04/
+
+Download ubuntu/aarch64 Docker image
+
+-In the Terminal, do this, where 'wonderful_colden' is the ubuntu image name
+
+docker exec -it wonderful_colden bash
+
+-In the container, do this
+
+rm -rf /layer
+
+rm -f dependencies.zip
+
+pip3 cache purge
+
+mkdir -p /layer/python/lib/python3.9/site-packages
+
+pip3 install datetime -t /layer/python/lib/python3.9/site-packages
+
+pip3 install \
+    --platform manylinux2014_aarch64 \
+    --implementation cp \
+    --python 3.9 \
+    --only-binary=:all: --upgrade \
+    --target /layer/python/lib/python3.9/site-packages \
+    pyopenssl==22.1.0
+
+pip3 install \
+    --platform manylinux2014_aarch64 \
+    --implementation cp \
+    --python 3.9 \
+    --only-binary=:all: --upgrade \
+    --target /layer/python/lib/python3.9/site-packages \
+    cryptography==38.0.4
+
+pip3 install \
+    --platform manylinux2014_aarch64 \
+    --implementation cp \
+    --python 3.9 \
+    --only-binary=:all: --upgrade \
+    --target /layer/python/lib/python3.9/site-packages \
+    pandas
+
+pip3 install \
+    --platform manylinux2014_aarch64 \
+    --implementation cp \
+    --python 3.9 \
+    --only-binary=:all: --upgrade \
+    --target /layer/python/lib/python3.9/site-packages \
+    fastparquet
+
+pip3 install pysisu -t /layer/python/lib/python3.9/site-packages
+
+pip3 install snowflake-connector-python==2.9.0 -t /layer/python/lib/python3.9/site-packages
+
+cd /layer
+
+zip -r /dependencies.zip *
+
+exit
+
+-In the Terminal, do this
+
+docker cp wonderful_colden:dependencies.zip ~/Documents/sisudata/field/api2bi/

@@ -1,0 +1,9 @@
+# Function dependencies
+#   NOTE: Code is written for python 3.9 and tested on arm64 architecture
+datetime
+pyopenssl==22.1.0
+cryptography==38.0.4
+pandas
+fastparquet
+pysisu
+snowflake-connector-python==2.9.0

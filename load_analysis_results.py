@@ -5,8 +5,7 @@ import pandas
 import numpy
 from pysisu import PySisu
 from pysisu.formats import LatestAnalysisResultsFormats
-from pysisu.proto.sisu.v1.api import AnalysisResultRunStatus
-from pysisu.proto.sisu.v1.api import ModifyAnalysisRequestAnalysis
+from pysisu.proto.sisu.v1.api import ModifyAnalysisRequestAnalysis, AnalysisResultRunStatus, UnitsConfigUnitType
 from time import sleep
 import io
 import config
@@ -18,7 +17,7 @@ import config
 #
 # START_DATE should be a datetime object
 # END_DATE should be a datetime object
-def process_tc_action(API_KEY: str, ANALYSIS_ID: int, ACTION_TYPE: str, START_DATE: datetime, END_DATE: datetime):
+def process_tc_action(API_KEY: str, ANALYSIS_ID: int, RETURN_RESULTS: bool, ACTION_TYPE: str, START_DATE: datetime, END_DATE: datetime):
     print('Starting process_tc_action at ' + str(datetime.datetime.now()))
 
     # Connect to Sisu
@@ -69,6 +68,8 @@ def process_tc_action(API_KEY: str, ANALYSIS_ID: int, ACTION_TYPE: str, START_DA
     previousStartDate = START_DATE - timeDelta
     previousEndDate = START_DATE
 
+    conn = None
+
     # We'll update the analysis, execute the load, and then advance the dates, until we complete the last date in the date range
     while(recentStartDate <= END_DATE):
         print('Updating analysis configuration for recentStartDate=' + str(recentStartDate) + '; recentEndDate=' + str(recentEndDate) + '; previousStartDate=' + str(previousStartDate) + '; previousEndDate=' + str(previousEndDate))
@@ -83,8 +84,9 @@ def process_tc_action(API_KEY: str, ANALYSIS_ID: int, ACTION_TYPE: str, START_DA
             print('Request JSON=' + req.to_json())
 
         result = sisu.modify_analysis(ANALYSIS_ID, req)
+
         print('Updated Analysis Configuration!')
-        execute_load(API_KEY, ANALYSIS_ID)
+        conn = execute_load(API_KEY, ANALYSIS_ID, True, RETURN_RESULTS, conn)
 
         previousStartDate += timeDelta
         previousEndDate += timeDelta
@@ -94,12 +96,23 @@ def process_tc_action(API_KEY: str, ANALYSIS_ID: int, ACTION_TYPE: str, START_DA
     # All done!
     print('Completing process_tc_action at ' + str(datetime.datetime.now()))
 
-def execute_load(API_KEY: str, ANALYSIS_ID: int):
+    if RETURN_RESULTS:
+        return conn
+    else:
+        return None
+
+def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_RESULTS: bool, _conn):
     # So... get to it!
     print('Starting execute_load at ' + str(datetime.datetime.now()))
 
-    # Get a database connection
-    conn = config.getDatabaseConnection()
+    # If we have an existing database connection, reuse it
+    if _conn:
+        # Reuse database connection
+        print('Reusing existing database connection!')
+        conn = _conn
+    else:
+        # Get a database connection
+        conn = config.getDatabaseConnection()
 
     # If we're truncating tables as part of this workflow, do it
     if config.TRUNCATE_TABLES:
@@ -116,6 +129,11 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
 
     ANALYSIS_TYPE = ''
     METRIC_NAME = ''
+    METRIC_UNIT = ''
+    METRIC_UNIT_IS_PERCENTAGE = 0
+    METRIC_UNIT_IS_SUFFIX = 0
+    METRIC_UNIT_SCALE = ''
+    METRIC_UNIT_KMB = ''
 
     # Cycle through the analyses and find the one we're looking for
     # get the metric ID from the analysis, NOT from the analysis results
@@ -139,18 +157,69 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
             for m in metrics.metrics:
                 if m.id == a.metric_id:
                     METRIC_NAME = m.name
+
+                    # Decode the metric units information
+                    if m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_PERCENT:
+                        METRIC_UNIT_IS_PERCENTAGE = 1
+                        METRIC_UNIT_IS_SUFFIX = 1
+                        METRIC_UNIT = '%'
+                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CURRENCY:
+                        METRIC_UNIT_IS_PERCENTAGE = 0
+                        METRIC_UNIT_IS_SUFFIX = 0
+
+                        if m.kpi_units_config.currency == 'EUR':
+                            METRIC_UNIT = '€'
+                        elif m.kpi_units_config.currency == 'USD':
+                            METRIC_UNIT = '$'
+                        elif m.kpi_units_config.currency == 'CAD':
+                            METRIC_UNIT = 'CA$'
+                        elif m.kpi_units_config.currency == 'AUD':
+                            METRIC_UNIT = 'A$'
+                        elif m.kpi_units_config.currency == 'JPY':
+                            METRIC_UNIT = '¥'
+                        elif m.kpi_units_config.currency == 'GBP':
+                            METRIC_UNIT = '£'
+
+                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_NUMBER:
+                        METRIC_UNIT_IS_PERCENTAGE = 0
+                        METRIC_UNIT_IS_SUFFIX = 1
+                        METRIC_UNIT = ''
+                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_BPS:
+                        METRIC_UNIT_IS_PERCENTAGE = 0
+                        METRIC_UNIT_IS_SUFFIX = 1
+                        METRIC_UNIT = 'bps'
+                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CUSTOM:
+                        METRIC_UNIT_IS_PERCENTAGE = 0
+                        METRIC_UNIT_IS_SUFFIX = 1
+                        METRIC_UNIT = m.kpi_units_config.label
+                    elif m.kpi_units_config.label != None:
+                        METRIC_UNIT_IS_PERCENTAGE = 0
+                        METRIC_UNIT_IS_SUFFIX = 1
+                        METRIC_UNIT = m.kpi_units_config.label
+                    else:
+                        METRIC_UNIT_IS_PERCENTAGE = 0
+                        METRIC_UNIT_IS_SUFFIX = 1
+                        METRIC_UNIT = ''
+
+                    if m.kpi_units_config.scale == None:
+                        METRIC_UNIT_SCALE = 1
+                    else:
+                        METRIC_UNIT_SCALE = m.kpi_units_config.scale
+
+                    METRIC_UNIT_KMB = m.kpi_units_config.kmb
+
                     # Delete the analysis metadata
                     conn.deleteAnalysisMetadata(ANALYSIS_ID)
                     # Insert the analysis metadata
-                    conn.writeAnalysisMetadata((ANALYSIS_ID, a.name, a.type.name, a.application_url, a.created_at, a.metric_id, m.name, m.desired_direction.name, a.project_id, project_name, datetime.datetime.now()))
+                    conn.writeAnalysisMetadata((ANALYSIS_ID, a.name, a.type.name, a.application_url, a.created_at, a.metric_id, m.name, m.desired_direction.name, METRIC_UNIT, METRIC_UNIT_IS_PERCENTAGE, METRIC_UNIT_IS_SUFFIX, METRIC_UNIT_SCALE, str(METRIC_UNIT_KMB), a.project_id, project_name, datetime.datetime.now()))
 
                     break
 
             break    
 
-    # If we're in DEBUG mode, don't run the analysis, just reuse the results
-    if config.DEBUG:
-        print('***** DEBUG MODE - Skipping running analysis *****')
+    # If we're not in EXECUTE mode, don't run the analysis, just reuse the results
+    if EXECUTE_ANALYSIS == False:
+        print('***** NOT IN EXECUTE MODE - Skipping running analysis *****')
     else:
         # Run the analysis synchronously
         sisu.run(ANALYSIS_ID)
@@ -178,8 +247,8 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
                 break
 
     # Get the analysis summary and details (segments,) and the waterfall
-    summary = sisu.get_results(ANALYSIS_ID, format=LatestAnalysisResultsFormats.PROTO).analysis_result
-    detail = sisu.get_results(ANALYSIS_ID, confidence_gte='LOW')
+    summary = sisu.get_results(ANALYSIS_ID, format=LatestAnalysisResultsFormats.PROTO, round_to_decimal_place=10).analysis_result
+    detail = sisu.get_results(ANALYSIS_ID, confidence_gte='LOW', round_to_decimal_place=10)
 
     if config.DEBUG:
         print('detail={\n' + detail.to_csv(config.DELIMITER).replace('\'', '') + '\n}')
@@ -518,6 +587,8 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
             # After processing the waterfall, create a dataframe so that we can easily insert into Snowflake
             wf = pandas.DataFrame(data=rows, columns=cols)
 
+            wf['LOAD_TS'] = str(datetime.datetime.now().isoformat(timespec='milliseconds'))
+
             if config.DEBUG:
                 print(wf)
             
@@ -547,9 +618,22 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
             df.rename(columns={'group_a_size': 'set1_size', 'group_b_size': 'set2_size', 'group_a_value': 'set1_value', 'group_b_value': 'set2_value'}, inplace=True)
         # Otherwise it's a general performance
         else:
-            df.rename(columns={'size': 'set1_size', 'value': 'set1_value'}, inplace=True)
+            df.rename(columns={'size': 'set1_size', 'value': 'set1_value', 'weighted_sum': 'WEIGHTED_CHANGE_IN_SUM', 'unweighted_average': 'UNWEIGHTED_CHANGE_IN_AVERAGE'}, inplace=True)
             df.insert(12, 'set2_size', numpy.nan)
             df.insert(14, 'set2_value', numpy.nan)
+            df.insert(14, 'change', numpy.nan)
+            df.insert(14, 'PERCENT_CHANGE_IN_SIZE', numpy.nan)
+            df.insert(14, 'change_in_impact', numpy.nan)
+            df.insert(14, 'mix_effect', numpy.nan)
+            df.insert(14, 'net_effect', numpy.nan)
+            df.insert(14, 'net_relative_effect', numpy.nan)
+            df.insert(14, 'rate_effect', numpy.nan)
+            df.insert(14, 'relative_change', numpy.nan)
+            df.insert(14, 'relative_mix_effect', numpy.nan)
+            df.insert(14, 'relative_percent_change', numpy.nan)
+
+        df.drop('change_in_impact', axis=1, inplace=True)
+        df.rename(columns={'change_in_size': 'PERCENT_CHANGE_IN_SIZE', 'change_in_average': 'UNWEIGHTED_CHANGE_IN_AVERAGE', 'change_in_sum': 'WEIGHTED_CHANGE_IN_SUM'}, inplace=True)
 
         df.insert(15, 'LOAD_TS', str(datetime.datetime.now().isoformat(timespec='milliseconds')))
         # Make the column names upper case to match the database
@@ -609,7 +693,7 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
         df.insert(27, 'PERCENT_CHANGE', '')
         
         def F_PERCENT_CHANGE(x):
-            if pandas.isna(x['SET2_VALUE']) or x['SET2_VALUE'] == 0: return pandas.NA
+            if pandas.isna(x['SET2_VALUE']) or x['SET2_VALUE'] == 0: return 100.0
             else: return (x['SET1_VALUE'] - x['SET2_VALUE'])/x['SET2_VALUE']
 
         df['PERCENT_CHANGE'] = df.apply(F_PERCENT_CHANGE, axis=1)
@@ -673,23 +757,13 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
         
         df['INSIGHT_TEXT'] = df.apply(F_INSIGHT_TEXT, axis=1)
 
-        df.insert(35, 'MIX_EFFECT', pandas.NA)
-        df.insert(36, 'NET_EFFECT', pandas.NA)
-        df.insert(37, 'NET_RELATIVE_EFFECT', pandas.NA)
-        df.insert(38, 'PERCENT_CHANGE_IN_SIZE', pandas.NA)
-        df.insert(39, 'RATE_EFFECT', pandas.NA)
-        df.insert(40, 'RELATIVE_PERCENT_CHANGE', pandas.NA)
-        df.insert(41, 'RATE_CHANGE', pandas.NA)
-        df.insert(42, 'RELATIVE_MIX_EFFECT', pandas.NA)
         df.insert(43, 'SEGMENT_NAME', pandas.NA)
         df.insert(44, 'SEGMENT_RANK', pandas.NA)
 
         df.insert(45, 'SEGMENT_HASH', df['FACTOR_0_DIMENSION'].astype(str) + df['FACTOR_0_VALUE'].astype(str) + df['FACTOR_1_DIMENSION'].astype(str) + df['FACTOR_1_VALUE'].astype(str) + df['FACTOR_2_DIMENSION'].astype(str) + df['FACTOR_2_VALUE'].astype(str))
 
-        df.insert(46, 'UNWEIGHTED_CHANGE_IN_AVERAGE', pandas.NA)
-        df.insert(47, 'WEIGHT', pandas.NA)
-        df.insert(48, 'WEIGHTED_CHANGE_IN_SUM', pandas.NA)
-        df.insert(49, 'UNITS', pandas.NA)
+        new_cols = ['ANALYSIS_ID', 'ANALYSIS_RESULT_ID', 'SUBGROUP_ID', 'CONFIDENCE', 'FACTOR_0_DIMENSION TEXT', 'FACTOR_0_VALUE TEXT', 'FACTOR_1_DIMENSION TEXT', 'FACTOR_1_VALUE TEXT', 'FACTOR_2_DIMENSION TEXT', 'FACTOR_2_VALUE TEXT', 'FACTOR_0_DIMENSION_FRIENDLY TEXT', 'FACTOR_1_DIMENSION_FRIENDLY', 'FACTOR_2_DIMENSION_FRIENDLY', 'FACTOR_0_VALUE_FRIENDLY', 'FACTOR_1_VALUE_FRIENDLY', 'FACTOR_2_VALUE_FRIENDLY', 'FACTOR_0_TEXT', 'FACTOR_1_TEXT', 'FACTOR_2_TEXT', 'SEGMENT_TEXT', 'CHANGE', 'IMPACT', 'IMPACT_MAGNITUDE', 'IMPACT_RANK', 'SET1_SIZE', 'SET2_SIZE', 'SET1_VALUE', 'SET2_VALUE', 'PERCENT_CHANGE', 'DIRECTION', 'DIRECTION_TEXT', 'ORIENTATION_MATCHES_METRIC', 'SEGMENT_ORDER', 'SEGMENT_ORDER_TEXT', 'INSIGHT_TEXT', 'CHANGE_IN_SIZE', 'MIX_EFFECT', 'NET_EFFECT', 'NET_RELATIVE_EFFECT', 'PERCENT_CHANGE_IN_SIZE', 'RATE_EFFECT', 'RELATIVE_PERCENT_CHANGE', 'RATE_CHANGE', 'RELATIVE_MIX_EFFECT', 'SEGMENT_NAME', 'SEGMENT_RANK', 'SEGMENT_HASH', 'UNWEIGHTED_CHANGE_IN_AVERAGE', 'WEIGHT', 'WEIGHTED_CHANGE_IN_SUM','LOAD_TS']
+        df.reindex(columns=new_cols)
 
         if config.DEBUG:
             print(df.dtypes)
@@ -700,4 +774,9 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int):
 
     # All done!
     print('Completing execute_load at ' + str(datetime.datetime.now()))
+
+    if RETURN_RESULTS:
+        return conn
+    else:
+        return None
 

@@ -1,6 +1,7 @@
 # REQUIRED IMPORTS
 import os
 from snowflake_database_helper import SisuOutputDatabaseConnection
+#from fivetran_database_helper import SisuOutputDatabaseConnection
 
 # RETURN A DATABASE CONNECTION
 def getDatabaseConnection():
@@ -9,7 +10,7 @@ def getDatabaseConnection():
 
 # DATABASE CONNECTION PARAMETERS
 USERNAME = ''
-PASSWORD = os.environ.get('SNOWFLAKE_PW')
+PASSWORD = ''
 ACCOUNT_IDENTIFIER = ''
 DATABASE_NAME = 'SISU_OUTPUTS'
 WAREHOUSE_NAME = ''
@@ -22,8 +23,9 @@ BATCH_SIZE = 1000
 TRUNCATE_TABLES = False
 DELIMITER = '^'
 DEBUG = False
+EXECUTE_ANALYSIS = True
 # END - SEGMENT LOAD PARAMETERS
 
 # USER PARAMETERS
-AI_API_KEY = os.environ.get('SISU_API_KEY')
+API_KEY = ''
 

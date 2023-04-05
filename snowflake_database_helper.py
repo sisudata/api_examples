@@ -8,7 +8,7 @@ SELECT_TC_ANALYSIS_RESULT_IDS = """SELECT ANALYSIS_RESULT_ID FROM ANALYSIS_RESUL
 SELECT_GC_ANALYSIS_RESULT_IDS = """SELECT ANALYSIS_RESULT_ID FROM ANALYSIS_RESULT_SUMMARY WHERE ANALYSIS_ID = %s AND GROUP_A_NAME = %s AND GROUP_B_NAME = %s"""
 SELECT_GP_ANALYSIS_RESULT_IDS = """SELECT ANALYSIS_RESULT_ID FROM ANALYSIS_RESULT_SUMMARY WHERE ANALYSIS_ID = %s"""
 
-ANALYSIS_INSERT_STATEMENT = """INSERT INTO ANALYSIS VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+ANALYSIS_INSERT_STATEMENT = """INSERT INTO ANALYSIS VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 ANALYSIS_RESULT_SUMMARY_INSERT_STATEMENT = """INSERT INTO ANALYSIS_RESULT_SUMMARY VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
 ANALYSIS_RESULT_DETAIL_TABLE_NAME = 'ANALYSIS_RESULT_DETAIL'
 ANALYSIS_RESULT_WATERFALL_TABLE_NAME = 'ANALYSIS_RESULT_WATERFALL'
@@ -200,3 +200,8 @@ class SisuOutputDatabaseConnection:
 
         return vals
 
+    # Method should format output into a JSON string that will be returned as output result of the fucntion call
+    def formatResults(self, event):
+        return 'NOT SUPPORTED: Not supported for Snowflake'
+    
+    
