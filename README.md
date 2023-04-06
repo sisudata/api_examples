@@ -1386,6 +1386,7 @@ Inputs to this method are all required:
 
 * **API_KEY** - String: A valid Sisu API Key for the customer organization where the analysis to be operated resides
 * **ANALYSIS_ID** - Integer: A valid Time Comparison analysis ID
+* **RETURN_RESULTS** - Boolean: True if the results are to be returned to the calling function as a JSON blob or object; False if the results are to be inserted into the database directly
 * **ACTION_TYPE** - String: Must be one of:
     * **DOD**: Day Over Day execution
     * **WOW**: Week Over Week
@@ -1393,7 +1394,7 @@ Inputs to this method are all required:
 * **START_DATE** - Datetime: The starting date of the <span style="text-decoration:underline;">first Recent Period</span> of the historical load
 * **END_DATE** - Datetime: The starting date of the <span style="text-decoration:underline;">last Recent Period</span> of the historical load
 
-Executing historical loads is then automated. The script will perform one of the **ACTION_TYPE** loads as requested by the user. Dates are calculated, the analysis specified in **ANALYSIS_ID** is modified to set the Recent and Previous Period dates as calculated (see below,) and `execute_load()` is called with the provided **API_KEY** and **ANALYSIS_ID**
+Executing historical loads is then automated. The script will perform one of the **ACTION_TYPE** loads as requested by the user. Dates are calculated, the analysis specified in **ANALYSIS_ID** is modified to set the Recent and Previous Period dates as calculated (see below,) and `execute_load()` is called with the provided **API_KEY, RETURN_RESULTS** and **ANALYSIS_ID**. **EXECUTE_ANALYSIS** is set to True
 
 Dates are calculated and the script operates in the following manner:
 
@@ -1582,6 +1583,8 @@ Inputs to this method are all required:
 
 * **API_KEY** - String: A valid Sisu API Key for the customer organization where the analysis to be operated resides
 * **ANALYSIS_ID** - Integer: A valid Trend Detection, General Performance, Group Comparison, or Time Comparison, analysis ID
+* **EXECUTE_ANALYSIS** - Boolean: True - execute the analysis before retrieving the analysis results; False - do not execute the analysis before retrieving the analysis results (i.e. use the results provided by Sisu’s previous execution of the analysis)
+* **RETURN_RESULTS** - Boolean: True - return the results to the caller as a formatted JSON string or object; False - insert the data directly into the database
 
 This function will then perform the following actions:
 
@@ -1589,24 +1592,25 @@ This function will then perform the following actions:
 
 1. Get a database connection by calling `config.getDatabaseConnection()`, which will return an object implementing the methods required of a `SisuOutputDatabaseConnection` (see above)
     1. Truncate the database tables if requested in config.py
-2. Connect to Sisu with the provided **API_KEY**, and get the Analysis metadata (including some Metric information.) Format it. Delete the existing metadata for this Analysis and write updated metadata for this Analysis to the data warehouse
-3. Execute the Analysis and retrieve the result summary and segment detail. Find any existing runs with the same group names or date ranges, and delete them from the summary and detail tables
-4. Format the summary information. Calculate some derived columns for the analysis summary table. Insert the summary information into the data warehouse
-5. Retrieve the analysis waterfall, format it, and insert it into the data warehouse
-6. Format the segment detail information. Calculate some derived columns for the segment detail table, and insert the segment details into the data warehouse
+2. Connect to Sisu with the provided **API_KEY**, and get the Analysis metadata (including some Metric information.) Format it. Delete the existing metadata for this Analysis and write updated metadata for this Analysis to the data warehouse if requested with **RETURN_RESULTS = False**
+3. Execute the Analysis, if requested with **EXECUTE_ANALYSIS = True**, and retrieve the result summary and segment detail. Find any existing runs with the same group names or date ranges, and delete them from the summary and detail tables
+4. Format the summary information. Calculate some derived columns for the analysis summary table. Insert the summary information into the data warehouse, if requested with **RETURN_RESULTS = False**
+5. Retrieve the analysis waterfall, format it, and insert it into the data warehouse if requested with **RETURN_RESULTS = False**
+6. Format the segment detail information. Calculate some derived columns for the segment detail table, and insert the segment details into the data warehouse if requested with **RETURN_RESULTS = False**
+7. Return the results for formatting into a JSON or object, if requested with **RETURN_RESULTS = True**
 
 
-### snowflake_database_helper.py
+### snowflake_database_helper.py / fivetran_database_helper.py
 
-This script defines a class called `SisuOutputDatabaseConnection` that performs database-related functions to write Sisu analysis and segment information into the data warehouse. As the name suggests, this class operates on Snowflake data warehouses. Customers using other data warehouses will need to create their own implementation of this class that implements all of the same functions available in this object
+This script defines a class called `SisuOutputDatabaseConnection` that performs database-related functions to write Sisu analysis and segment information into the data warehouse, or return a formatted object / JSON string the caller can understand. We provide example helpers for Snowflake and Fivetran. Customers using other data warehouses will need to create their own implementation of this class that implements all of the same functions available in this object
 
-Class **variables** are declared at the top of the class to define SQL statements that would be used to execute select, insert, delete, and truncate operations for the specific data warehouse. <span style="text-decoration:underline;">These variables are convenience for the developer and not explicitly required as they are not used by callers of the class</span>
+Class **variables** are declared at the top of the class to define SQL statements that would be used to execute select, insert, delete, and truncate operations for the specific data warehouse, and internal data structures to store result data. <span style="text-decoration:underline;">These variables are convenience for the developer and not explicitly required as they are not used by callers of the class</span>
 
-Class **functions** are declared inside the class declaration to perform the various database operations required to operate the `execute_load()` function detailed above. <span style="text-decoration:underline;">Unlike class variables, class functions are required and must be implemented for any new data warehouse type a customer desires to use</span>:
+Class **functions** are declared inside the class declaration to perform the various operations required to operate the `execute_load()` function detailed above. <span style="text-decoration:underline;">Unlike class variables, class functions are required and must be implemented for any new data warehouse type a customer desires to use</span>:
 
 
 
-* **__init__()**: This is a standard class initialization function. Using configuration in `config.py`, it performs warehouse-specific tasks to establish a connection and create a reusable cursor for database operations that span the life of the execution. At the end of this function, a connection and cursor object should be fully initialized and stored in the class variables
+* **__init__()**: This is a standard class initialization function. Using configuration in `config.py`, it performs warehouse-specific tasks to establish a connection and create a reusable cursor for database operations that span the life of the execution. At the end of this function, a connection and cursor object, and any internal data structures required, should be fully initialized and stored in the class variables
 * **truncateTables()**: This function should perform the database operations required to remove all data from all of the database tables defined for the solution. Think of this as a reset button for the data tables. At the end of this function, each of the tables will be empty
 * **deleteAnalysisMetadata(ANALYSIS_ID Integer)**: This function should delete the analysis with the **ANALYSIS_ID** provided as input from the **ANALYSIS** table
 * **writeAnalysisMetadata(vals List)**: This function should insert a record into the **ANALYSIS** table. The input list **vals** will contain, in order, the column values to be inserted into the table to form a complete record, even if a column value is <span style="text-decoration:underline;">NULL</span>
@@ -1620,16 +1624,27 @@ Class **functions** are declared inside the class declaration to perform the var
 * **writeTrendResultDetail(df Dataframe, vals List)**: This function should delete any existing data with the **ANALYSIS_ID** and **ANALYSIS_RESULT_ID** found as the first and second entry in the input list **vals**, and then insert the trend details in the pandas dataframe **df** into the **TREND_RESULT_DETAIL** table. Each row of **df** will contain a complete record, even if some of the column values are <span style="text-decoration:underline;">NULL</span>
 * **getTCAnalysisResultIDs(ANALYSIS_ID Integer, RECENT_PERIOD_START String, RECENT_PERIOD_END String, PREVIOUS_PERIOD_START String, PREVIOUS_PERIOD_END String)**: This function will return a list of **ANALYSIS_RESULT_ID’s** that correspond to an analysis with the given ID and date ranges. This is to facilitate deletion of previous executions of a time comparison analysis with those date ranges to avoid having duplicate data in the database
 * **getGCAnalysisResultIDs(ANALYSIS_ID Integer, GROUP_A_NAME String, GROUP_B_NAME String)**: This function will return a list of **ANALYSIS_RESULT_ID’s** that correspond to an analysis with the given ID and group names. This is to facilitate deletion of previous executions of a group comparison analysis with those group names to avoid having duplicate data in the database
-* **getGPAnalysisResultIDs(self, ANALYSIS_ID Integer)**: This function will return a list of **ANALYSIS_RESULT_ID’s** that correspond to an analysis with the given ID. This is to facilitate deletion of previous executions of a general performance analysis to avoid having duplicate data in the database
+* **getGPAnalysisResultIDs(ANALYSIS_ID Integer)**: This function will return a list of **ANALYSIS_RESULT_ID’s** that correspond to an analysis with the given ID. This is to facilitate deletion of previous executions of a general performance analysis to avoid having duplicate data in the database
+* **formatResults(event Dict)**: This function will return a formatted JSON string or other returnable object that delivers results back to the calling function / system instead of inserting it into the database. This method will only be called if **RETURN_RESULTS = True** is specified by the caller. This method may not be applicable to all database handlers
 
 
 ### lambda_function.py
 
 We provide a script called `lambda_function.py` that can immediately be used with an AWS Lambda Function to support workflow orchestration as outlined above in Step 3. This script may also be useful for customers wishing to integrate scheduled execution / load of Sisu segments into other workflows and tools; this script will work with AWS Lambda Functions directly, but also any other caller that makes execution calls with the same input Event format
 
-This script defines a single function, `lambda_handler(event Dictionary, context Dictionary)`: The input **context** is not used by the function. The input **event** is used to pass execution requests to the `load_analysis_results.py` script for either a one-off execution of an analysis, or a historical execution
+This script defines a single function, `lambda_handler(event Dictionary, context Dictionary)`: The input **context** is not used by the function. The input **event** is used to pass execution requests to the `orchestrator.py` script for either a one-off execution of an analysis, or a historical execution
 
-Each input event is a dictionary consisting of the following entries:
+
+### fivetran_gcf_main.py
+
+We provide a script called `fivetran_gcf_main.py` that can immediately be used with a Google Cloud Function to support workflow orchestration as outlined above in Step 3. This script will work with Google Cloud Functions called through Fivetran Connectors directly, but also any other caller that makes execution calls with the same input event format contained in a secrets section of a JSON GET message
+
+This script defines a single function, `main(req Request)`: The input req is used to pass a formatted JSON request message that is parsed into a dictionary. The **secrets** dictionary is extracted from the request and sent to the `orchestrator.py` script for either a one-off execution of an analysis, or a historical execution
+
+
+### orchestrator.py
+
+This script defines a single function, `main(event Dictionary)`, that contains the input parameters needed to operate the workflow. The following required and optional parameters may be specified:
 
 
 
@@ -1646,9 +1661,11 @@ Each input event is a dictionary consisting of the following entries:
     * **THIS_WEEK**: Sets the **START_DATE** to the current date
     * **LAST_MONTH**: Sets the **START_DATE** to the current date - 1 month
 * **END_DATE** - String - <span style="text-decoration:underline;">Optional iff **ACTION_TYPE** is specified, ignored otherwise</span>: The **END_DATE**, if specified, must be a String in the format of ‘YYYY-MM-DD’. If no **END_DATE** is specified, the **END_DATE** is set to the same value as the decoded **START_DATE**
+* **RETURN_RESULTS** - Boolean - <span style="text-decoration:underline;">Optional</span>: Default is **False**. Pass **True** if you wish the scripts to return a formatted response object instead of directly inserting results into the database (ex: to return a JSON response object to a web service call.) A value of **True** will result in a call to **formatResults** to the database handler
+* **EXECUTE_ANALYSIS** - Boolean - <span style="text-decoration:underline;">Optional</span>: Default is **True**. Pass **False** if you wish the scripts to not execute the analysis before retrieving results (ex: to use the results as they exist in Sisu at the time of script execution). **True** will result in the script executing the analysis through a Sisu API call before retrieving results
 
 If an **API_KEY** and **ANALYSIS_ID** are provided, a single call is made to `load_analysis_results.execute_load()`
 
 If an **ACTION_TYPE** is specified, the **START_DATE** parameter is decoded, the **END_DATE** parameter is decoded, and a single call is made to `load_analysis_results.process_tc_action()`
 
-If the calls above complete successfully, a response dictionary is returned with a **statusCode** of <span style="text-decoration:underline;">200</span>, and a JSON **body** indicating successful execution. Otherwise, exceptions raised by the script are thrown to the caller to indicate failure
+If the calls above complete successfully and **RETURN_RESULTS = False**, a response dictionary is returned with a **statusCode** of <span style="text-decoration:underline;">200</span>, and a JSON **body** indicating successful execution. If the calls above complete successfully and **RETURN_RESULTS = True**, formatted results are returned by the database handler, and it is up to the implementing class to return proper results that the caller will accept. Otherwise, exceptions raised by the script are thrown to the caller to indicate failure
