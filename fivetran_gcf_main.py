@@ -18,8 +18,7 @@ import orchestrator as o
 # See Sisu's docs for the required input parameters to specify in the "secrets" block. "state" block will be returned with the analysis ID and 
 # the start / end dates if specified
 def main(req):
-    #req_dict = req.json
-    req_dict = json.loads(req)
+    req_dict = req.json
 
     event = req_dict['secrets']
 
