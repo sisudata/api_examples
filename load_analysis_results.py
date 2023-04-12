@@ -24,7 +24,7 @@ def process_tc_action(API_KEY: str, ANALYSIS_ID: int, RETURN_RESULTS: bool, ACTI
     sisu = PySisu(API_KEY)
     print('Successfully connected to Sisu!')
 
-    # Get the analysis information
+    """# Get the analysis information
     analyses = sisu.analyses()
     print('Getting analyses...')
 
@@ -39,7 +39,7 @@ def process_tc_action(API_KEY: str, ANALYSIS_ID: int, RETURN_RESULTS: bool, ACTI
 
             print('Found the projectId=' + str(projectId) + ' and metricID=' + str(metricId))
 
-            break
+            break"""
 
     recentStartDate = recentEndDate = previousStartDate = previousEndDate = datetime.date(1900, 1, 1)
 
@@ -134,86 +134,78 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
     METRIC_UNIT_IS_SUFFIX = 0
     METRIC_UNIT_SCALE = ''
     METRIC_UNIT_KMB = ''
+    project_name = ''
 
     # Cycle through the analyses and find the one we're looking for
     # get the metric ID from the analysis, NOT from the analysis results
     for a in analyses.analyses:
         if a.id == ANALYSIS_ID:
             ANALYSIS_TYPE = a.type.name
-            project_name = ''
 
-            projects = sisu.get_projects()
+            project = sisu.get_project(a.project_id)
 
-            print('Getting projects...')
-            for p in projects.projects:
-                if p.id == a.project_id:
-                    project_name = p.name
+            print('Getting project info...')
+            project_name = project.name
 
-                    break
+            metric = sisu.get_metric(a.metric_id)
 
-            metrics = sisu.metrics()
+            print('Gettimg mettic info...')
+            METRIC_NAME = metric.name
 
-            print('Gettimg mettics...')
-            for m in metrics.metrics:
-                if m.id == a.metric_id:
-                    METRIC_NAME = m.name
+            # Decode the metric units information
+            if metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_PERCENT:
+                METRIC_UNIT_IS_PERCENTAGE = 1
+                METRIC_UNIT_IS_SUFFIX = 1
+                METRIC_UNIT = '%'
+            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CURRENCY:
+                METRIC_UNIT_IS_PERCENTAGE = 0
+                METRIC_UNIT_IS_SUFFIX = 0
 
-                    # Decode the metric units information
-                    if m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_PERCENT:
-                        METRIC_UNIT_IS_PERCENTAGE = 1
-                        METRIC_UNIT_IS_SUFFIX = 1
-                        METRIC_UNIT = '%'
-                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CURRENCY:
-                        METRIC_UNIT_IS_PERCENTAGE = 0
-                        METRIC_UNIT_IS_SUFFIX = 0
+                if metric.kpi_units_config.currency == 'EUR':
+                    METRIC_UNIT = '€'
+                elif metric.kpi_units_config.currency == 'USD':
+                    METRIC_UNIT = '$'
+                elif metric.kpi_units_config.currency == 'CAD':
+                    METRIC_UNIT = 'CA$'
+                elif metric.kpi_units_config.currency == 'AUD':
+                    METRIC_UNIT = 'A$'
+                elif metric.kpi_units_config.currency == 'JPY':
+                    METRIC_UNIT = '¥'
+                elif metric.kpi_units_config.currency == 'GBP':
+                    METRIC_UNIT = '£'
 
-                        if m.kpi_units_config.currency == 'EUR':
-                            METRIC_UNIT = '€'
-                        elif m.kpi_units_config.currency == 'USD':
-                            METRIC_UNIT = '$'
-                        elif m.kpi_units_config.currency == 'CAD':
-                            METRIC_UNIT = 'CA$'
-                        elif m.kpi_units_config.currency == 'AUD':
-                            METRIC_UNIT = 'A$'
-                        elif m.kpi_units_config.currency == 'JPY':
-                            METRIC_UNIT = '¥'
-                        elif m.kpi_units_config.currency == 'GBP':
-                            METRIC_UNIT = '£'
+            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_NUMBER:
+                METRIC_UNIT_IS_PERCENTAGE = 0
+                METRIC_UNIT_IS_SUFFIX = 1
+                METRIC_UNIT = ''
+            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_BPS:
+                METRIC_UNIT_IS_PERCENTAGE = 0
+                METRIC_UNIT_IS_SUFFIX = 1
+                METRIC_UNIT = 'bps'
+            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CUSTOM:
+                METRIC_UNIT_IS_PERCENTAGE = 0
+                METRIC_UNIT_IS_SUFFIX = 1
+                METRIC_UNIT = metric.kpi_units_config.label
+            elif metric.kpi_units_config.label != None:
+                METRIC_UNIT_IS_PERCENTAGE = 0
+                METRIC_UNIT_IS_SUFFIX = 1
+                METRIC_UNIT = metric.kpi_units_config.label
+            else:
+                METRIC_UNIT_IS_PERCENTAGE = 0
+                METRIC_UNIT_IS_SUFFIX = 1
+                METRIC_UNIT = ''
 
-                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_NUMBER:
-                        METRIC_UNIT_IS_PERCENTAGE = 0
-                        METRIC_UNIT_IS_SUFFIX = 1
-                        METRIC_UNIT = ''
-                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_BPS:
-                        METRIC_UNIT_IS_PERCENTAGE = 0
-                        METRIC_UNIT_IS_SUFFIX = 1
-                        METRIC_UNIT = 'bps'
-                    elif m.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CUSTOM:
-                        METRIC_UNIT_IS_PERCENTAGE = 0
-                        METRIC_UNIT_IS_SUFFIX = 1
-                        METRIC_UNIT = m.kpi_units_config.label
-                    elif m.kpi_units_config.label != None:
-                        METRIC_UNIT_IS_PERCENTAGE = 0
-                        METRIC_UNIT_IS_SUFFIX = 1
-                        METRIC_UNIT = m.kpi_units_config.label
-                    else:
-                        METRIC_UNIT_IS_PERCENTAGE = 0
-                        METRIC_UNIT_IS_SUFFIX = 1
-                        METRIC_UNIT = ''
+            if metric.kpi_units_config.scale == None:
+                METRIC_UNIT_SCALE = 1
+            else:
+                METRIC_UNIT_SCALE = metric.kpi_units_config.scale
 
-                    if m.kpi_units_config.scale == None:
-                        METRIC_UNIT_SCALE = 1
-                    else:
-                        METRIC_UNIT_SCALE = m.kpi_units_config.scale
+            METRIC_UNIT_KMB = metric.kpi_units_config.kmb
 
-                    METRIC_UNIT_KMB = m.kpi_units_config.kmb
-
-                    # Delete the analysis metadata
-                    conn.deleteAnalysisMetadata(ANALYSIS_ID)
-                    # Insert the analysis metadata
-                    conn.writeAnalysisMetadata((ANALYSIS_ID, a.name, a.type.name, a.application_url, a.created_at, a.metric_id, m.name, m.desired_direction.name, METRIC_UNIT, METRIC_UNIT_IS_PERCENTAGE, METRIC_UNIT_IS_SUFFIX, METRIC_UNIT_SCALE, str(METRIC_UNIT_KMB), a.project_id, project_name, datetime.datetime.now()))
-
-                    break
+            # Delete the analysis metadata
+            conn.deleteAnalysisMetadata(ANALYSIS_ID)
+            # Insert the analysis metadata
+            conn.writeAnalysisMetadata((ANALYSIS_ID, a.name, a.type.name, a.application_url, a.created_at, a.metric_id, metric.name, metric.desired_direction.name, METRIC_UNIT, METRIC_UNIT_IS_PERCENTAGE, METRIC_UNIT_IS_SUFFIX, METRIC_UNIT_SCALE, str(METRIC_UNIT_KMB), a.project_id, project_name, datetime.datetime.now()))
 
             break    
 
@@ -235,9 +227,8 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
                 print(f"Status of ANALYSIS_ID={ANALYSIS_ID} is {run_status.name}")
             except:
                 print('Error checking execution status! Retrying...')
-            finally:
                 errorCount += 1
-
+            finally:
                 if errorCount >= 5:
                     break
 
