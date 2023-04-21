@@ -645,35 +645,35 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
         df.insert(16, 'FACTOR_0_TEXT', '')
 
         def F_FACTOR_0_TEXT(x):
-            if pandas.isna(x['FACTOR_0_DIMENSION']): return pandas.NA
-            elif isinstance(x['FACTOR_0_VALUE'], float): return x['FACTOR_0_DIMENSION'] + ' is ' + str(round(x['FACTOR_0_VALUE'],2))
-            else: return x['FACTOR_0_DIMENSION'] + ' is ' + str(x['FACTOR_0_VALUE'])
+            if pandas.isna(x['FACTOR_0_DIMENSION_FRIENDLY']): return pandas.NA
+            elif isinstance(x['FACTOR_0_VALUE'], float): return x['FACTOR_0_DIMENSION_FRIENDLY'] + ' is ' + str(round(x['FACTOR_0_VALUE'],2))
+            else: return x['FACTOR_0_DIMENSION_FRIENDLY'] + ' is ' + str(x['FACTOR_0_VALUE'])
 
         df['FACTOR_0_TEXT'] = df.apply(F_FACTOR_0_TEXT, axis=1)
         
         df.insert(17, 'FACTOR_1_TEXT', '')
 
         def F_FACTOR_1_TEXT(x):
-            if pandas.isna(x['FACTOR_1_DIMENSION']): return pandas.NA
-            elif isinstance(x['FACTOR_1_VALUE'], float): return x['FACTOR_1_DIMENSION'] + ' is ' + str(round(x['FACTOR_1_VALUE'],2))
-            else: return x['FACTOR_1_DIMENSION'] + ' is ' + str(x['FACTOR_1_VALUE'])
+            if pandas.isna(x['FACTOR_1_DIMENSION_FRIENDLY']): return pandas.NA
+            elif isinstance(x['FACTOR_1_VALUE'], float): return x['FACTOR_1_DIMENSION_FRIENDLY'] + ' is ' + str(round(x['FACTOR_1_VALUE'],2))
+            else: return x['FACTOR_1_DIMENSION_FRIENDLY'] + ' is ' + str(x['FACTOR_1_VALUE'])
 
         df['FACTOR_1_TEXT'] = df.apply(F_FACTOR_1_TEXT, axis=1)
 
         df.insert(17, 'FACTOR_2_TEXT', '')
 
         def F_FACTOR_2_TEXT(x):
-            if pandas.isna(x['FACTOR_2_DIMENSION']): return pandas.NA
-            elif isinstance(x['FACTOR_2_VALUE'], float): return x['FACTOR_2_DIMENSION'] + ' is ' + str(round(x['FACTOR_2_VALUE'],2))
-            else: return x['FACTOR_2_DIMENSION'] + ' is ' + str(x['FACTOR_2_VALUE'])
+            if pandas.isna(x['FACTOR_2_DIMENSION_FRIENDLY']): return pandas.NA
+            elif isinstance(x['FACTOR_2_VALUE'], float): return x['FACTOR_2_DIMENSION_FRIENDLY'] + ' is ' + str(round(x['FACTOR_2_VALUE'],2))
+            else: return x['FACTOR_2_DIMENSION_FRIENDLY'] + ' is ' + str(x['FACTOR_2_VALUE'])
 
         df['FACTOR_2_TEXT'] = df.apply(F_FACTOR_2_TEXT, axis=1)
         
         df.insert(19, 'SEGMENT_TEXT', '')
 
         def F_SEGMENT_TEXT(x):
-            if pandas.isna(x['FACTOR_1_DIMENSION']) and pandas.isna(x['FACTOR_2_DIMENSION']): return x['FACTOR_0_TEXT']
-            elif pandas.isna(x['FACTOR_2_DIMENSION']): return x['FACTOR_0_TEXT'] + ', ' + x['FACTOR_1_TEXT']
+            if pandas.isna(x['FACTOR_1_DIMENSION_FRIENDLY']) and pandas.isna(x['FACTOR_2_DIMENSION_FRIENDLY']): return x['FACTOR_0_TEXT']
+            elif pandas.isna(x['FACTOR_2_DIMENSION_FRIENDLY']): return x['FACTOR_0_TEXT'] + ', ' + x['FACTOR_1_TEXT']
             else: return x['FACTOR_0_TEXT'] + ', ' + x['FACTOR_1_TEXT'] + ', ' + x['FACTOR_2_TEXT']
         
         df['SEGMENT_TEXT'] = df.apply(F_SEGMENT_TEXT, axis=1)
