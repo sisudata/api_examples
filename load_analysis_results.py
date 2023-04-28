@@ -743,8 +743,7 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
         df.insert(33, 'INSIGHT_TEXT', '')
 
         def F_INSIGHT_TEXT(x):
-            if pandas.isna(x['SET2_SIZE']): return METRIC_NAME + ' is ' + str(round(x['SET1_VALUE'],2)) + ' when ' + x['SEGMENT_TEXT']
-            else: return METRIC_NAME + ' ' + x['DIRECTION_TEXT'] + ' ' + str(round(x['CHANGE_IN_SIZE'],2)) + ' (' + str(round((x['PERCENT_CHANGE']*100.0),2)) + ' %) from ' + str(round(x['SET2_SIZE'],2)) + ' to ' + str(round(x['SET1_SIZE'],2)) + ' when ' + x['SEGMENT_TEXT']
+            return METRIC_NAME + ' ' + x['DIRECTION_TEXT'] + ' ' + str(x['IMPACT']) + ' when ' + x['SEGMENT_TEXT']
         
         df['INSIGHT_TEXT'] = df.apply(F_INSIGHT_TEXT, axis=1)
 
