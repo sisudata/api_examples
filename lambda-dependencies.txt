@@ -52,7 +52,7 @@ pip3 install \
     --target /layer/python/lib/python3.9/site-packages \
     fastparquet
 
-pip3 install pysisu -t /layer/python/lib/python3.9/site-packages
+pip3 install pysisu>=0.4.16 -t /layer/python/lib/python3.9/site-packages
 
 pip3 install snowflake-connector-python==2.9.0 -t /layer/python/lib/python3.9/site-packages
 

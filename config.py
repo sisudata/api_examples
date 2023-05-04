@@ -2,6 +2,7 @@
 import os
 from snowflake_database_helper import SisuOutputDatabaseConnection
 #from fivetran_database_helper import SisuOutputDatabaseConnection
+#from csv_database_helper import SisuOutputDatabaseConnection
 
 # RETURN A DATABASE CONNECTION
 def getDatabaseConnection():
@@ -17,6 +18,12 @@ WAREHOUSE_NAME = ''
 SCHEMA_NAME = 'PUBLIC'
 ROLE_NAME = ''
 # END - DATABASE CONNECTION PARAMETERS
+
+# CSV PARAMETERS
+FILEPATH = '/Users/jdoe/Documents'
+OVERWRITE = True
+CSV_DELIMITER = ','
+# END - CSV PARAMETERS
 
 # SEGMENT LOAD PARAMETERS
 BATCH_SIZE = 1000

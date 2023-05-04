@@ -5,5 +5,5 @@ pyopenssl==22.1.0
 cryptography==38.0.4
 pandas
 fastparquet
-pysisu
+pysisu>=0.4.16
 snowflake-connector-python==2.9.0
