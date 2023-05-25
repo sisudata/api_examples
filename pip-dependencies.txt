@@ -1,0 +1,17 @@
+# This file contains a set of pip commands to install all the dependencies required for the solution
+
+pip3 install datetime
+
+pip3 install python-dateutil
+
+pip3 install pyopenssl==22.1.0
+
+pip3 install cryptography==38.0.4
+
+pip3 install pandas
+
+pip3 install fastparquet
+
+pip3 install pysisu>=0.4.16
+
+pip3 install snowflake-connector-python==2.9.0

@@ -20,6 +20,8 @@ mkdir -p /layer/python/lib/python3.9/site-packages
 
 pip3 install datetime -t /layer/python/lib/python3.9/site-packages
 
+pip3 install python-dateutil -t /layer/python/lib/python3.9/site-packages
+
 pip3 install \
     --platform manylinux2014_aarch64 \
     --implementation cp \

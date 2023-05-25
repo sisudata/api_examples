@@ -1,5 +1,7 @@
 # REQUIRED IMPORTS
 import os
+
+# ONLY ONE OF THESE HANDLERS CAN BE USED AT ANY TIME. UNCOMMENT ONE OF THE BELOW HANDLERS
 from snowflake_database_helper import SisuOutputDatabaseConnection
 #from fivetran_database_helper import SisuOutputDatabaseConnection
 #from csv_database_helper import SisuOutputDatabaseConnection

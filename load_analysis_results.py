@@ -24,23 +24,6 @@ def process_tc_action(API_KEY: str, ANALYSIS_ID: int, RETURN_RESULTS: bool, ACTI
     sisu = PySisu(API_KEY)
     print('Successfully connected to Sisu!')
 
-    """# Get the analysis information
-    analyses = sisu.analyses()
-    print('Getting analyses...')
-
-    metricId = projectId = 0
-
-    # Cycle through the analyses and find the one we're looking for
-    # get the metric ID and project ID so we can update the Time Comparison
-    for a in analyses.analyses:
-        if a.id == ANALYSIS_ID:
-            metricId = a.metric_id
-            projectId = a.project_id
-
-            print('Found the projectId=' + str(projectId) + ' and metricID=' + str(metricId))
-
-            break"""
-
     recentStartDate = recentEndDate = previousStartDate = previousEndDate = datetime.date(1900, 1, 1)
 
     timeDelta = ''
@@ -124,8 +107,8 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
     print('Successfully connected to Sisu!')
 
     # Get the analysis information
-    analyses = sisu.analyses()
-    print('Getting analyses...')
+    analysis = sisu.get_analysis(ANALYSIS_ID)
+    print('Getting analysis info...')
 
     ANALYSIS_TYPE = ''
     METRIC_NAME = ''
@@ -136,78 +119,73 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
     METRIC_UNIT_KMB = ''
     project_name = ''
 
-    # Cycle through the analyses and find the one we're looking for
     # get the metric ID from the analysis, NOT from the analysis results
-    for a in analyses.analyses:
-        if a.id == ANALYSIS_ID:
-            ANALYSIS_TYPE = a.type.name
+    ANALYSIS_TYPE = analysis.type.name
 
-            project = sisu.get_project(a.project_id)
+    project = sisu.get_project(analysis.project_id)
 
-            print('Getting project info...')
-            project_name = project.name
+    print('Getting project info...')
+    project_name = project.name
 
-            metric = sisu.get_metric(a.metric_id)
+    metric = sisu.get_metric(analysis.metric_id)
 
-            print('Gettimg mettic info...')
-            METRIC_NAME = metric.name
+    print('Gettimg mettic info...')
+    METRIC_NAME = metric.name
 
-            # Decode the metric units information
-            if metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_PERCENT:
-                METRIC_UNIT_IS_PERCENTAGE = 1
-                METRIC_UNIT_IS_SUFFIX = 1
-                METRIC_UNIT = '%'
-            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CURRENCY:
-                METRIC_UNIT_IS_PERCENTAGE = 0
-                METRIC_UNIT_IS_SUFFIX = 0
+    # Decode the metric units information
+    if metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_PERCENT:
+        METRIC_UNIT_IS_PERCENTAGE = 1
+        METRIC_UNIT_IS_SUFFIX = 1
+        METRIC_UNIT = '%'
+    elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CURRENCY:
+        METRIC_UNIT_IS_PERCENTAGE = 0
+        METRIC_UNIT_IS_SUFFIX = 0
 
-                if metric.kpi_units_config.currency == 'EUR':
-                    METRIC_UNIT = '€'
-                elif metric.kpi_units_config.currency == 'USD':
-                    METRIC_UNIT = '$'
-                elif metric.kpi_units_config.currency == 'CAD':
-                    METRIC_UNIT = 'CA$'
-                elif metric.kpi_units_config.currency == 'AUD':
-                    METRIC_UNIT = 'A$'
-                elif metric.kpi_units_config.currency == 'JPY':
-                    METRIC_UNIT = '¥'
-                elif metric.kpi_units_config.currency == 'GBP':
-                    METRIC_UNIT = '£'
+        if metric.kpi_units_config.currency == 'EUR':
+            METRIC_UNIT = '€'
+        elif metric.kpi_units_config.currency == 'USD':
+            METRIC_UNIT = '$'
+        elif metric.kpi_units_config.currency == 'CAD':
+            METRIC_UNIT = 'CA$'
+        elif metric.kpi_units_config.currency == 'AUD':
+            METRIC_UNIT = 'A$'
+        elif metric.kpi_units_config.currency == 'JPY':
+            METRIC_UNIT = '¥'
+        elif metric.kpi_units_config.currency == 'GBP':
+            METRIC_UNIT = '£'
 
-            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_NUMBER:
-                METRIC_UNIT_IS_PERCENTAGE = 0
-                METRIC_UNIT_IS_SUFFIX = 1
-                METRIC_UNIT = ''
-            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_BPS:
-                METRIC_UNIT_IS_PERCENTAGE = 0
-                METRIC_UNIT_IS_SUFFIX = 1
-                METRIC_UNIT = 'bps'
-            elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CUSTOM:
-                METRIC_UNIT_IS_PERCENTAGE = 0
-                METRIC_UNIT_IS_SUFFIX = 1
-                METRIC_UNIT = metric.kpi_units_config.label
-            elif metric.kpi_units_config.label != None:
-                METRIC_UNIT_IS_PERCENTAGE = 0
-                METRIC_UNIT_IS_SUFFIX = 1
-                METRIC_UNIT = metric.kpi_units_config.label
-            else:
-                METRIC_UNIT_IS_PERCENTAGE = 0
-                METRIC_UNIT_IS_SUFFIX = 1
-                METRIC_UNIT = ''
+    elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_NUMBER:
+        METRIC_UNIT_IS_PERCENTAGE = 0
+        METRIC_UNIT_IS_SUFFIX = 1
+        METRIC_UNIT = ''
+    elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_BPS:
+        METRIC_UNIT_IS_PERCENTAGE = 0
+        METRIC_UNIT_IS_SUFFIX = 1
+        METRIC_UNIT = 'bps'
+    elif metric.kpi_units_config.type == UnitsConfigUnitType.UNIT_TYPE_CUSTOM:
+        METRIC_UNIT_IS_PERCENTAGE = 0
+        METRIC_UNIT_IS_SUFFIX = 1
+        METRIC_UNIT = metric.kpi_units_config.label
+    elif metric.kpi_units_config.label != None:
+        METRIC_UNIT_IS_PERCENTAGE = 0
+        METRIC_UNIT_IS_SUFFIX = 1
+        METRIC_UNIT = metric.kpi_units_config.label
+    else:
+        METRIC_UNIT_IS_PERCENTAGE = 0
+        METRIC_UNIT_IS_SUFFIX = 1
+        METRIC_UNIT = ''
 
-            if metric.kpi_units_config.scale == None:
-                METRIC_UNIT_SCALE = 1
-            else:
-                METRIC_UNIT_SCALE = metric.kpi_units_config.scale
+    if metric.kpi_units_config.scale == None:
+        METRIC_UNIT_SCALE = 1
+    else:
+        METRIC_UNIT_SCALE = metric.kpi_units_config.scale
 
-            METRIC_UNIT_KMB = metric.kpi_units_config.kmb
+    METRIC_UNIT_KMB = metric.kpi_units_config.kmb
 
-            # Delete the analysis metadata
-            conn.deleteAnalysisMetadata(ANALYSIS_ID)
-            # Insert the analysis metadata
-            conn.writeAnalysisMetadata((ANALYSIS_ID, a.name, a.type.name, a.application_url, a.created_at, a.metric_id, metric.name, metric.desired_direction.name, METRIC_UNIT, METRIC_UNIT_IS_PERCENTAGE, METRIC_UNIT_IS_SUFFIX, METRIC_UNIT_SCALE, str(METRIC_UNIT_KMB), a.project_id, project_name, datetime.datetime.now()))
-
-            break    
+    # Delete the analysis metadata
+    conn.deleteAnalysisMetadata(ANALYSIS_ID)
+    # Insert the analysis metadata
+    conn.writeAnalysisMetadata((ANALYSIS_ID, analysis.name, analysis.type.name, analysis.application_url, analysis.created_at, analysis.metric_id, metric.name, metric.desired_direction.name, METRIC_UNIT, METRIC_UNIT_IS_PERCENTAGE, METRIC_UNIT_IS_SUFFIX, METRIC_UNIT_SCALE, str(METRIC_UNIT_KMB), analysis.project_id, project_name, datetime.datetime.now()))
 
     # If we're not in EXECUTE mode, don't run the analysis, just reuse the results
     if EXECUTE_ANALYSIS == False:
@@ -736,7 +714,10 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
         df['SEGMENT_ORDER_TEXT'] = df.apply(F_SEGMENT_ORDER_TEXT, axis=1)
 
         # This should be index 34, but we need it to calculate the INSIGHT_TEXT, so we'll set it in index 33 for now, and then insert INSIGHT_TEXT
-        # into index 33 again later
+        #     into index 33 again later
+        #
+        # Also, the "change_in_size" field that's returned from get_results() is actually the "percent_change_in_size" field, so we have to 
+        #     calculate the "change_in_size" field ourselves
         df.insert(33, 'CHANGE_IN_SIZE', df['SET1_SIZE'] - df['SET2_SIZE'])
 
         # This is the REAL index 33 column
