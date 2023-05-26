@@ -21,7 +21,7 @@ def process_tc_action(API_KEY: str, ANALYSIS_ID: int, RETURN_RESULTS: bool, ACTI
     print('Starting process_tc_action at ' + str(datetime.datetime.now()))
 
     # Connect to Sisu
-    sisu = PySisu(API_KEY)
+    sisu = PySisu(API_KEY, config.SISU_URL)
     print('Successfully connected to Sisu!')
 
     recentStartDate = recentEndDate = previousStartDate = previousEndDate = datetime.date(1900, 1, 1)
