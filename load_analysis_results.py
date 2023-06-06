@@ -103,7 +103,7 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
         conn.truncateTables()
 
     # Connect to Sisu
-    sisu = PySisu(API_KEY)
+    sisu = PySisu(API_KEY, config.SISU_URL)
     print('Successfully connected to Sisu!')
 
     # Get the analysis information
