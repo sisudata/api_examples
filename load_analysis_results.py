@@ -475,7 +475,7 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
             waterfall = sisu.get_analysis_waterfall(ANALYSIS_ID)
 
             # Set the column set, and create a container for the rows
-            cols = ['ANALYSIS_ID', 'ANALYSIS_RESULT_ID', 'STEP_ID', 'STEP_TYPE', 'FACTOR_0_DIMENSION', 'FACTOR_0_VALUE', 'FACTOR_1_DIMENSION', 'FACTOR_1_VALUE', 'FACTOR_2_DIMENSION', 'FACTOR_2_VALUE', 'STEP_IMPACT', 'CUMULATIVE_IMPACT_BEFORE_STEP', 'CUMULATIVE_IMPACT_AFTER_STEP', 'OVERLAPPING_IMPACT', 'CHANGE_IN_SIZE_SET1', 'CHANGE_IN_SIZE_SET2', 'CHANGE_IN_TYPE_SET1', 'CHANGE_IN_TYPE_SET2']
+            cols = ['ANALYSIS_ID', 'ANALYSIS_RESULT_ID', 'STEP_ID', 'STEP_TYPE', 'FACTOR_0_DIMENSION', 'FACTOR_0_VALUE', 'FACTOR_1_DIMENSION', 'FACTOR_1_VALUE', 'FACTOR_2_DIMENSION', 'FACTOR_2_VALUE', 'STEP_IMPACT', 'CUMULATIVE_IMPACT_BEFORE_STEP', 'CUMULATIVE_IMPACT_AFTER_STEP', 'OVERLAPPING_IMPACT', 'CHANGE_IN_SIZE_SET1', 'CHANGE_IN_SIZE_SET2', 'CHANGE_IN_TYPE_SET1', 'CHANGE_IN_TYPE_SET2', 'SEGMENT_TEXT']
             rows = []
 
             # We'll process each step in the waterfall one at a time
@@ -548,7 +548,16 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
                 row.append(step.change_in_size.subgroup_b)
                 row.append(step.change_in_type.subgroup_a)
                 row.append(step.change_in_type.subgroup_b)
-                
+
+                if row[4]=='' and row[6]=='' and row[8]=='':
+                    row.append('')
+                elif row[6]=='' and row[8]=='':
+                    row.append(str(row[4]).title().replace("_", " ") + ' is ' + str(row[5]).title().replace("_", " "))
+                elif row[8]=='':
+                    row.append(str(row[4]).title().replace("_", " ") + ' is ' + str(row[5]).title().replace("_", " ") + ', ' + str(row[6]).title().replace("_", " ") + ' is ' + str(row[7]).title().replace("_", " "))
+                else:
+                    row.append(str(row[4]).title().replace("_", " ") + ' is ' + str(row[5]).title().replace("_", " ") + ', ' + str(row[6]).title().replace("_", " ") + ' is ' + str(row[7]).title().replace("_", " ") + ', ' + str(row[8]).title().replace("_", " ") + ' is ' + str(row[9]).title().replace("_", " "))
+                        
                 # Put the row into the rowset
                 rows.append(row)
                 _i+=1
