@@ -622,12 +622,53 @@ def execute_load(API_KEY: str, ANALYSIS_ID: int, EXECUTE_ANALYSIS: bool, RETURN_
             print(df)
 
         # Add the derived columns to the dataframe
-        df.insert(10, 'FACTOR_0_DIMENSION_FRIENDLY', df['FACTOR_0_DIMENSION'].str.title().str.replace("_", " "))
-        df.insert(11, 'FACTOR_1_DIMENSION_FRIENDLY', df['FACTOR_1_DIMENSION'].str.title().str.replace("_", " "))
-        df.insert(12, 'FACTOR_2_DIMENSION_FRIENDLY', df['FACTOR_2_DIMENSION'].str.title().str.replace("_", " "))
-        df.insert(13, 'FACTOR_0_VALUE_FRIENDLY', df['FACTOR_0_VALUE'].str.title().str.replace("_", " "))
-        df.insert(14, 'FACTOR_1_VALUE_FRIENDLY', df['FACTOR_1_VALUE'].str.title().str.replace("_", " "))
-        df.insert(15, 'FACTOR_2_VALUE_FRIENDLY', df['FACTOR_2_VALUE'].str.title().str.replace("_", " "))
+        df.insert(10, 'FACTOR_0_DIMENSION_FRIENDLY', '')
+
+        def F_FACTOR_0_DIMENSION_FRIENDLY(x):
+            if pandas.isna(x['FACTOR_0_DIMENSION']): return pandas.NA
+            else: return str(str(x['FACTOR_0_DIMENSION']).title()).replace("_", " ")
+
+        df['FACTOR_0_DIMENSION_FRIENDLY'] = df.apply(F_FACTOR_0_DIMENSION_FRIENDLY, axis=1)
+        
+        df.insert(11, 'FACTOR_1_DIMENSION_FRIENDLY', '')
+
+        def F_FACTOR_1_DIMENSION_FRIENDLY(x):
+            if pandas.isna(x['FACTOR_1_DIMENSION']): return pandas.NA
+            else: return str(str(x['FACTOR_1_DIMENSION']).title()).replace("_", " ")
+
+        df['FACTOR_1_DIMENSION_FRIENDLY'] = df.apply(F_FACTOR_1_DIMENSION_FRIENDLY, axis=1)
+
+        df.insert(12, 'FACTOR_2_DIMENSION_FRIENDLY', '')
+
+        def F_FACTOR_2_DIMENSION_FRIENDLY(x):
+            if pandas.isna(x['FACTOR_2_DIMENSION']): return pandas.NA
+            else: return str(str(x['FACTOR_2_DIMENSION']).title()).replace("_", " ")
+
+        df['FACTOR_2_DIMENSION_FRIENDLY'] = df.apply(F_FACTOR_2_DIMENSION_FRIENDLY, axis=1)
+
+        df.insert(13, 'FACTOR_0_VALUE_FRIENDLY', '')
+
+        def F_FACTOR_0_VALUE_FRIENDLY(x):
+            if pandas.isna(x['FACTOR_0_VALUE']): return pandas.NA
+            else: return str(str(x['FACTOR_0_VALUE']).title()).replace("_", " ")
+
+        df['FACTOR_0_VALUE_FRIENDLY'] = df.apply(F_FACTOR_0_VALUE_FRIENDLY, axis=1)
+
+        df.insert(14, 'FACTOR_1_VALUE_FRIENDLY', '')
+
+        def F_FACTOR_1_VALUE_FRIENDLY(x):
+            if pandas.isna(x['FACTOR_1_VALUE']): return pandas.NA
+            else: return str(str(x['FACTOR_1_VALUE']).title()).replace("_", " ")
+
+        df['FACTOR_1_VALUE_FRIENDLY'] = df.apply(F_FACTOR_1_VALUE_FRIENDLY, axis=1)
+
+        df.insert(15, 'FACTOR_2_VALUE_FRIENDLY', '')
+
+        def F_FACTOR_2_VALUE_FRIENDLY(x):
+            if pandas.isna(x['FACTOR_2_VALUE']): return pandas.NA
+            else: return str(str(x['FACTOR_2_VALUE']).title()).replace("_", " ")
+
+        df['FACTOR_2_VALUE_FRIENDLY'] = df.apply(F_FACTOR_2_VALUE_FRIENDLY, axis=1)
 
         df.insert(16, 'FACTOR_0_TEXT', '')
 
